@@ -1,0 +1,357 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{listings}
+\newcommand{\passthrough}[1]{#1}
+\lstset{defaultdialect=[5.3]Lua}
+\lstset{defaultdialect=[x86masm]Assembler}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+\usepackage[bidi=basic]{babel}
+\else
+\usepackage[bidi=default]{babel}
+\fi
+\babelprovide[main,import]{french}
+% get rid of language-specific shorthands (see #6817):
+\let\LanguageShortHands\languageshorthands
+\def\languageshorthands#1{}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdflang={fr},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{}
+
+\begin{document}
+
+\section{TP --- Télécharger, stocker et charger un dataset dans Google
+Colab}\label{tp-tuxe9luxe9charger-stocker-et-charger-un-dataset-dans-google-colab}
+
+\textbf{Objectif :} télécharger un jeu de données depuis Kaggle, le
+Fonds monétaire international (FMI) ou le Haut-Commissariat au Plan
+(HCP) du Maroc, le stocker dans Google Drive ou sur GitHub, puis le
+charger dans Google Colab avec Python et Pandas et l'exploiter avec
+SQLite.
+
+\subsection{1. Architecture générale}\label{architecture-guxe9nuxe9rale}
+
+\begin{lstlisting}
+Kaggle / FMI / HCP
+       |
+   CSV ou Excel
+       |
+  +----+----+
+  |         |
+Google Drive  GitHub (dépôt public)
+  |         |
+  +----+----+
+       |
+ Google Colab + Pandas
+       |
+ SQLite + requêtes SQL
+\end{lstlisting}
+
+\subsection{2. Télécharger un
+dataset}\label{tuxe9luxe9charger-un-dataset}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Kaggle :} \url{https://www.kaggle.com/datasets} --- rechercher
+  un dataset, ouvrir sa page et cliquer sur « Download ». Un compte peut
+  être nécessaire.
+\item
+  \textbf{FMI :} \url{https://www.imf.org/en/Data} --- sélectionner une
+  base et des indicateurs, puis exporter les données si l'option existe.
+\item
+  \textbf{HCP Maroc :} \url{https://www.hcp.ma} --- rechercher une
+  publication statistique et télécharger un tableau CSV ou Excel
+  lorsqu'il est disponible.
+\end{itemize}
+
+Dans la suite, on suppose que le fichier s'appelle
+\passthrough{\lstinline!dataset.csv!}. Vérifier les conditions de
+licence avant toute republication.
+
+\subsection{3. Méthode A --- Stocker le dataset sur Google
+Drive}\label{muxe9thode-a-stocker-le-dataset-sur-google-drive}
+
+\subsubsection{Étape A1 --- Importer le
+fichier}\label{uxe9tape-a1-importer-le-fichier}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Ouvrir \url{https://drive.google.com}.
+\item
+  Créer un dossier \passthrough{\lstinline!TP\_SQL\_Dataset!}.
+\item
+  Importer \passthrough{\lstinline!dataset.csv!} dans ce dossier.
+\item
+  Ouvrir un notebook sur \url{https://colab.research.google.com}.
+\end{enumerate}
+
+\subsubsection{Étape A2 --- Monter Google
+Drive}\label{uxe9tape-a2-monter-google-drive}
+
+\begin{lstlisting}[language=Python]
+from google.colab import drive
+
+# Autoriser l'accès à Google Drive
+drive.mount('/content/drive')
+\end{lstlisting}
+
+\subsubsection{Étape A3 --- Charger les
+données}\label{uxe9tape-a3-charger-les-donnuxe9es}
+
+\begin{lstlisting}[language=Python]
+import pandas as pd
+from pathlib import Path
+
+chemin = Path('/content/drive/MyDrive/TP_SQL_Dataset/dataset.csv')
+
+if not chemin.is_file():
+    raise FileNotFoundError(f'Fichier introuvable : {chemin}')
+
+df = pd.read_csv(chemin)
+display(df.head(10))
+print('Nombre de lignes :', df.shape[0])
+print('Nombre de colonnes :', df.shape[1])
+\end{lstlisting}
+
+\textbf{Variantes :} pour Excel, utiliser
+\passthrough{\lstinline!pd.read\_excel(chemin)!} avec un chemin
+\passthrough{\lstinline!.xlsx!} ; pour un CSV séparé par des
+points-virgules, utiliser
+\passthrough{\lstinline!pd.read\_csv(chemin, sep=';')!}. Vérifier aussi
+l'encodage du fichier.
+
+\subsection{4. Méthode B --- Stocker le dataset sur
+GitHub}\label{muxe9thode-b-stocker-le-dataset-sur-github}
+
+\subsubsection{Étape B1 --- Créer un dépôt et téléverser le
+fichier}\label{uxe9tape-b1-cruxe9er-un-duxe9puxf4t-et-tuxe9luxe9verser-le-fichier}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Se connecter à \url{https://github.com} et choisir \textbf{New
+  repository}.
+\item
+  Nommer le dépôt \passthrough{\lstinline!TP\_SQL\_Dataset!}.
+\item
+  Choisir \textbf{Public} si le chargement doit se faire sans
+  authentification.
+\item
+  Créer le dépôt, puis choisir \textbf{Add file → Upload files}.
+\item
+  Ajouter \passthrough{\lstinline!dataset.csv!} et valider avec
+  \textbf{Commit changes}.
+\end{enumerate}
+
+\textbf{Attention :} ne pas publier de données confidentielles ni de
+dataset dont la licence interdit la redistribution. Les dépôts GitHub ne
+sont pas adaptés aux très gros fichiers de données.
+
+\subsubsection{Étape B2 --- Récupérer le lien
+Raw}\label{uxe9tape-b2-ruxe9cupuxe9rer-le-lien-raw}
+
+Ouvrir \passthrough{\lstinline!dataset.csv!} dans le dépôt, cliquer sur
+\textbf{Raw} et copier son URL. Sa structure est généralement :
+
+\begin{lstlisting}
+https://raw.githubusercontent.com/UTILISATEUR/TP_SQL_Dataset/main/dataset.csv
+\end{lstlisting}
+
+Remplacer \passthrough{\lstinline!UTILISATEUR!} par le compte réel et
+\passthrough{\lstinline!main!} par le nom de la branche utilisée si
+nécessaire.
+
+\subsubsection{Étape B3 --- Charger directement depuis
+GitHub}\label{uxe9tape-b3-charger-directement-depuis-github}
+
+\begin{lstlisting}[language=Python]
+import pandas as pd
+
+url = (
+    'https://raw.githubusercontent.com/'
+    'UTILISATEUR/TP_SQL_Dataset/main/dataset.csv'
+)
+
+df = pd.read_csv(url)
+display(df.head(10))
+print('Dimensions :', df.shape)
+print('Colonnes :', df.columns.tolist())
+\end{lstlisting}
+
+Ce script est un \textbf{modèle à personnaliser} : l'URL d'exemple ne
+pointe pas vers un dataset réel.
+
+\subsection{5. Méthode C --- Script unique : choisir Drive ou
+GitHub}\label{muxe9thode-c-script-unique-choisir-drive-ou-github}
+
+Modifier \passthrough{\lstinline!SOURCE!} et les chemins en fonction du
+fichier réellement utilisé.
+
+\begin{lstlisting}[language=Python]
+import pandas as pd
+
+SOURCE = 'drive'  # 'drive' ou 'github'
+
+if SOURCE == 'drive':
+    from google.colab import drive
+    drive.mount('/content/drive')
+    fichier = '/content/drive/MyDrive/TP_SQL_Dataset/dataset.csv'
+else:
+    fichier = (
+        'https://raw.githubusercontent.com/'
+        'UTILISATEUR/TP_SQL_Dataset/main/dataset.csv'
+    )
+
+df = pd.read_csv(fichier)
+display(df.head(10))
+print('Dimensions :', df.shape)
+\end{lstlisting}
+
+\subsection{6. Exploiter ensuite le dataset avec
+SQLite}\label{exploiter-ensuite-le-dataset-avec-sqlite}
+
+Le DataFrame \passthrough{\lstinline!df!} a déjà été chargé par l'une
+des méthodes précédentes.
+
+\begin{lstlisting}[language=Python]
+import sqlite3
+import pandas as pd
+
+# Base locale temporaire dans l'environnement Colab
+conn = sqlite3.connect('tp_sql.db')
+
+# Importer les données dans la table SQLite « donnees »
+df.to_sql('donnees', conn, if_exists='replace', index=False)
+
+# Première requête SQL
+requete = '''
+SELECT *
+FROM donnees
+LIMIT 10;
+'''
+resultat = pd.read_sql_query(requete, conn)
+display(resultat)
+
+# Vérifier le nombre de lignes importées
+total = pd.read_sql_query(
+    'SELECT COUNT(*) AS total FROM donnees;', conn
+)
+display(total)
+
+conn.close()
+\end{lstlisting}
+
+\textbf{Persistance :} \passthrough{\lstinline!tp\_sql.db!} est créé ici
+dans l'environnement temporaire de Colab. Pour le conserver, copier le
+fichier vers Drive ou créer directement la base dans un dossier Drive
+monté.
+
+\subsection{7. Comparaison des deux
+méthodes}\label{comparaison-des-deux-muxe9thodes}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3333}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Critère
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Google Drive
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+GitHub
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Facilité pour les débutants & Très bonne & Bonne \\
+Stockage privé & Oui & Oui, avec authentification pour l'accès
+programmatique \\
+Chargement direct par URL & Pas avec le chemin Drive ordinaire & Oui,
+avec Raw et dépôt public \\
+Partage & Autorisations Drive & Dépôt et collaborateurs \\
+Gestion des versions & Limitée & Très bonne \\
+Données volumineuses & Généralement plus adapté & Limites de taille et
+de dépôt \\
+Usage pédagogique & TP individuels & TP collaboratifs et
+reproductibilité \\
+\end{longtable}
+
+\subsection{8. Recommandation
+pédagogique}\label{recommandation-puxe9dagogique}
+
+Privilégier \textbf{Google Drive} comme méthode principale pour des
+étudiants débutants. Présenter \textbf{GitHub} comme méthode
+complémentaire pour aborder le partage des datasets, la reproductibilité
+et le versionnement.
+
+\textbf{Prolongement :} demander aux étudiants de construire 15 requêtes
+SQL progressives sur le dataset chargé, puis de présenter et commenter
+les résultats avec Pandas.
+
+\end{document}
